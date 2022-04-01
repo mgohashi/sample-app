@@ -28,6 +28,12 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+  <distributionManagement>
+    <snapshotRepository>
+      <id>nexus-snapshots</id>
+      <url>https://nexus-cicd-tools.apps.cluster-d6lf7.d6lf7.sandbox998.opentlc.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
   <dependencies>
     <dependency>
       <groupId>io.quarkus</groupId>
