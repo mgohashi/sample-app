@@ -7,12 +7,16 @@ import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import io.mohashi.fixture.PanacheEntityBaseWithFixture;
+import io.mohashi.service.UserSearch;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
+import io.quarkus.hibernate.reactive.panache.PanacheQuery;
+import io.quarkus.panache.common.Parameters;
 import io.vertx.mutiny.sqlclient.Row;
 
 @Entity
 @Table(name = "USERS")
-public class User extends PanacheEntityBase {	
+public class User extends PanacheEntityBaseWithFixture {	
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_seq")
@@ -72,10 +76,40 @@ public class User extends PanacheEntityBase {
             return false;
         return true;
     }
-    
+
+    @Override
+    public String toString() {
+        return "User [id=" + id + ", name=" + name + ", email=" + email + "]";
+    }
+
     public static User from(Row row) {
         return new User(row.getLong("id"),
         row.getString("name"),
         row.getString("email"));
     }
+
+    public static PanacheQuery<PanacheEntityBase> findBySearch(UserSearch userSearch) {
+        switch (userSearch.getType()) {
+            case NAME: 
+                return User.find("name like :name", 
+                    Parameters.with("name", 
+                        wrap(userSearch.name().get())));
+            case EMAIL:
+                return User.find("email like :email", 
+                    Parameters.with("email", 
+                        wrap(userSearch.email().get())));
+            case ALL:
+                return User.find("name like :name and email like :email", 
+                    Parameters.with("name", 
+                        wrap(userSearch.name().get()))
+                            .and("email", wrap(userSearch.email().get())));
+            default:
+                return User.findAll();
+        }
+    }
+
+    private static Object wrap(String string) {
+        return "%" + string + "%";
+    }
+
 }

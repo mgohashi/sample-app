@@ -1,63 +1,156 @@
 package io.mohashi.resource;
 
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+
+import java.util.Arrays;
 import java.util.List;
 
-import javax.inject.Inject;
-
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import io.mohashi.model.User;
+import io.mohashi.service.ImmutableUserSearch;
+import io.mohashi.service.UserService;
 import io.quarkus.test.junit.QuarkusTest;
-import io.smallrye.mutiny.Multi;
-import io.vertx.mutiny.pgclient.PgPool;
-import static io.restassured.RestAssured.*;
-import static org.hamcrest.CoreMatchers.*;
+import io.quarkus.test.junit.mockito.InjectMock;
+import io.restassured.http.ContentType;
+import io.smallrye.mutiny.Uni;
 
 @QuarkusTest
 public class UserResourceTest {
 
-    @Inject
-    PgPool client;
-    
-    private void populateDbWithUserList() {
-        client.query("DELETE FROM users").execute()
-            .flatMap(r -> client.query("INSERT INTO users (id, name, email) VALUES (nextval('user_id_seq'),'John', 'john@test.com')").execute())
-            .flatMap(r -> client.query("INSERT INTO users (id, name, email) VALUES (nextval('user_id_seq'),'Maria', 'maria@test.com')").execute())
-            .flatMap(r -> client.query("INSERT INTO users (id, name, email) VALUES (nextval('user_id_seq'),'Monty', 'monty@test.com')").execute())
-            .await().indefinitely();
-    }
+    @InjectMock
+    UserService userService;
 
-    @AfterEach
-    public void deleteAllData() {
-        client.query("DELETE FROM users").execute().await().indefinitely();
-    }
-    
     @Test
     public void testGet() {
-        populateDbWithUserList();
+        List<User> expected = Arrays.asList(
+            new User(1l, "John", "john@test.com"),
+            new User(2l, "Maria", "maria@test.com"),
+            new User(3l, "Faye", "faye@test.com"));
 
-        List<User> expected = getExpectedUsers()
-            .collect().asList().await().indefinitely();
+        Mockito.when(
+            userService.list(ImmutableUserSearch.builder().build()))
+                .thenReturn(Uni.createFrom().item(expected));
 
-        given()
+        List<User> actual = given()
+            .accept(ContentType.JSON)
         .when()
             .get("/api/v1/user")
         .then()
             //.log().all()
-            .statusCode(is(200))
             .assertThat()
-                .contentType("application/json")
+                .statusCode(is(200))
+                .contentType(ContentType.JSON)
                 .body("size()", equalTo(3))
-                .body("[0].id", equalTo(expected.get(0).getId().intValue()))
-                .body("[0].name", equalTo(expected.get(0).getName()))
-                .body("[0].email", equalTo(expected.get(0).getEmail()));
+            .extract()
+                .body().jsonPath().getList(".", User.class);
+
+        assertThat(actual, equalTo(expected));
     }
 
-    private Multi<User> getExpectedUsers() {
-        return client
-            .query("SELECT id, name, email from users order by id").execute()
-            .onItem().transformToMulti(set -> Multi.createFrom().iterable(set))
-            .onItem().transform(User::from);
+    @Test
+    public void testGetByName() {
+        List<User> expected = Arrays.asList(
+            new User(1l, "John", "john@test.com"));
+
+        Mockito.when(
+            userService.list(ImmutableUserSearch.builder().name("John").build()))
+                .thenReturn(Uni.createFrom().item(expected));
+
+        List<User> actual = given()
+            .accept(ContentType.JSON)
+            .param("name", "John")
+        .when()
+            .get("/api/v1/user")
+        .then()
+            //.log().all()f
+            .assertThat()
+                .statusCode(is(200))
+                .contentType(ContentType.JSON)
+                .body("size()", equalTo(1))
+            .extract()
+                .body().jsonPath().getList(".", User.class);
+
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    public void testGetUser() {
+        User expected = new User(1l, "John", "john@test.com");
+
+        Mockito.when(userService.get(expected.getId())).thenReturn(Uni.createFrom().item(expected));
+
+        User actual = given()
+            .accept(ContentType.JSON)
+        .when()
+            .get("/api/v1/user/1")
+        .then()
+        .assertThat()
+            .statusCode(is(200))
+            .contentType(ContentType.JSON)
+        .extract()
+            .body().as(User.class);
+
+        assertThat(actual, is(expected));
+    }
+
+    @Test
+    public void testPost() {
+        User expected = new User(1l, "John", "john@test.com");
+        
+        Mockito.when(userService.persist(expected)).thenReturn(Uni.createFrom().item(expected));
+
+        User actual = given()
+            .contentType(ContentType.JSON)
+            .accept(ContentType.JSON)
+            .body(expected)
+        .when()
+            .post("/api/v1/user")
+        .then()
+            // .log().all()
+            .assertThat()
+                .statusCode(equalTo(200))
+            .extract().as(User.class);
+        
+        expected.setId(actual.getId());
+
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    public void testPut() {
+        User expected = new User(1l, "John", "john@test.com");
+
+        Mockito.when(userService.persist(expected)).thenReturn(Uni.createFrom().item(expected));
+
+        User actual = given()
+            .contentType(ContentType.JSON)
+            .accept(ContentType.JSON)
+            .body(expected)
+        .when()
+            .put("/api/v1/user")
+        .then()
+            // .log().all()
+            .assertThat()
+                .statusCode(equalTo(200))
+            .extract().as(User.class);
+        
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    public void testDelete() {
+        Mockito.when(userService.delete(1l)).thenReturn(Uni.createFrom().voidItem());
+
+        given()
+        .when()
+            .delete("/api/v1/user/1")
+        .then()
+            .assertThat()
+                .statusCode(equalTo(200));
     }
 }

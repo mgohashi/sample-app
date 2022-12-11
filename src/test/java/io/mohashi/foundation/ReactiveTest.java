@@ -1,11 +1,14 @@
-package io.mohashi.util;
+package io.mohashi.foundation;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.mutiny.Multi;
@@ -14,6 +17,8 @@ import io.smallrye.mutiny.helpers.test.AssertSubscriber;
 import io.smallrye.mutiny.helpers.test.UniAssertSubscriber;
 
 public class ReactiveTest {
+
+    private static Logger LOG = Logger.getLogger(ReactiveTest.class);
 
     @Test
     public void testBasicUni() {
@@ -121,5 +126,60 @@ public class ReactiveTest {
                 Character.valueOf('d'),
                 Character.valueOf('4')
                 )));
+    }
+
+    @Test
+    public void testMultiNullValues() {
+        List<String> items = Arrays.asList("1", null, "3", null, "5");
+
+        UniAssertSubscriber<List<String>> subs =
+            Multi.createFrom().items(items.stream())
+                .collect().asList()
+                // .onFailure().invoke(t -> t.printStackTrace())
+                .subscribe().withSubscriber(UniAssertSubscriber.create());
+
+        subs.assertFailedWith(NullPointerException.class, 
+            "The stream iterator produced `null`");
+    }
+
+    @Test
+    public void testMultiFilter() {
+        AssertSubscriber<Integer> subs = Multi.createFrom()
+            .range(1,10)
+                .select().where(i -> i % 2 == 0)
+                .subscribe().withSubscriber(AssertSubscriber.create(10));
+        subs.assertCompleted().assertItems(2,4,6,8);
+    }
+
+    @Test
+    public void testMultiMerging() {
+        Multi<Integer> m1 = Multi.createFrom().range(1, 10);
+        Multi<Integer> m2 = Multi.createFrom().range(10, 20);
+
+        Multi<Integer> merged = Multi.createBy().merging().streams(m1, m2);
+
+
+        AssertSubscriber<Integer> subs = merged.subscribe()
+            .withSubscriber(AssertSubscriber.create(20));
+
+        subs.assertCompleted()
+            .assertItems(IntStream.range(1, 20)
+                .boxed().toList().toArray(Integer[]::new));
+    }
+
+    @Test
+    public void testMultiConcatenating() {
+        Multi<Integer> m1 = Multi.createFrom().range(1, 10);
+        Multi<Integer> m2 = Multi.createFrom().range(10, 20);
+
+        Multi<Integer> concatenated = 
+            Multi.createBy().concatenating().streams(m1, m2);
+        
+        AssertSubscriber<Integer> subs = concatenated.subscribe()
+            .withSubscriber(AssertSubscriber.create(20));
+        
+        subs.assertCompleted()
+            .assertItems(IntStream.range(1, 20)
+                .boxed().toList().toArray(Integer[]::new));
     }
 }
