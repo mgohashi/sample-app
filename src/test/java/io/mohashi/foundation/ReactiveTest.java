@@ -6,9 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.mutiny.Multi;
@@ -17,8 +15,6 @@ import io.smallrye.mutiny.helpers.test.AssertSubscriber;
 import io.smallrye.mutiny.helpers.test.UniAssertSubscriber;
 
 public class ReactiveTest {
-
-    private static Logger LOG = Logger.getLogger(ReactiveTest.class);
 
     @Test
     public void testBasicUni() {
