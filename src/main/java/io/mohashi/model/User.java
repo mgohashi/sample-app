@@ -8,10 +8,12 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 import io.mohashi.fixture.PanacheEntityBaseWithFixture;
+import io.mohashi.service.NotFoundException;
 import io.mohashi.service.UserSearch;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import io.quarkus.hibernate.reactive.panache.PanacheQuery;
 import io.quarkus.panache.common.Parameters;
+import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.sqlclient.Row;
 
 @Entity

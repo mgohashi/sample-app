@@ -13,6 +13,7 @@ import org.mockito.Mockito;
 
 import io.mohashi.model.User;
 import io.mohashi.service.ImmutableUserSearch;
+import io.mohashi.service.NotFoundException;
 import io.mohashi.service.UserService;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectMock;
@@ -152,5 +153,17 @@ public class UserResourceTest {
         .then()
             .assertThat()
                 .statusCode(equalTo(200));
+    }
+
+    @Test
+    public void testDeleteNotFound() {
+        Mockito.when(userService.delete(1l)).thenThrow(new NotFoundException("User has not been found"));
+
+        given()
+        .when()
+            .delete("/api/v1/user/1")
+        .then()
+            .assertThat()
+                .statusCode(equalTo(404));
     }
 }

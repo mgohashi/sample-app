@@ -13,7 +13,9 @@ import io.smallrye.mutiny.Uni;
 public class UserService {
 
     public Uni<User> get(Long id) {
-        return User.findById(id);
+        return User.<User>findById(id)
+            .onItem().ifNull()
+                .failWith(new NotFoundException("User has not been found"));
     }
 
     public Uni<List<User>> list(UserSearch userSearch) {
@@ -22,10 +24,13 @@ public class UserService {
 
     public Uni<User> persist(User user) {
         if (user.getId() != null) {
-            User persistedUser = (User)User.findById(user.getId()).await().indefinitely();
-            persistedUser.setName(user.getName());
-            persistedUser.setEmail(user.getEmail());
-            user = persistedUser;
+            return User.<User>findById(user.getId())
+                .onItem().ifNull().failWith(new NotFoundException("User has not been found"))
+                .onItem().ifNotNull().<User>transformToUni((persistedUser) -> {
+                    persistedUser.setName(user.getName());
+                    persistedUser.setEmail(user.getEmail());
+                    return persistedUser.persistAndFlush();
+                });
         }
         return user.persistAndFlush();
     }

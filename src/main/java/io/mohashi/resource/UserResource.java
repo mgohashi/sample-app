@@ -12,13 +12,16 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.jboss.resteasy.reactive.RestPath;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.jboss.resteasy.reactive.server.ServerExceptionMapper;
 
 import io.mohashi.model.User;
 import io.mohashi.service.ImmutableUserSearch;
+import io.mohashi.service.NotFoundException;
 import io.mohashi.service.UserSearch;
 import io.mohashi.service.UserService;
 import io.smallrye.mutiny.Uni;
@@ -76,5 +79,8 @@ public class UserResource {
             .flatMap(res -> Uni.createFrom().item(Response.ok().build()));
     }
 
-
+    @ServerExceptionMapper(NotFoundException.class)
+    public Uni<Response> handleNotFound() {
+        return Uni.createFrom().item(Response.status(Status.NOT_FOUND).build());
+    }
 }
