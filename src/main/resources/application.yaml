@@ -1,0 +1,24 @@
+quarkus:
+  #Logging
+  log:
+    category:
+      "io.quarkus.category":
+        level: INFO
+  #HTTP Server
+  http:
+    host: 0.0.0.0
+  #Datasource
+  datasource:
+    db-kind: postgresql
+    username: db
+    password: db123
+    reactive:
+      url: vertx-reactive:postgresql://localhost:5432/db
+  #ORM
+  hibernate-orm:
+    database:
+      generation: 
+        ~: "drop-and-create"
+    log:
+      format-sql: true
+      sql: true
