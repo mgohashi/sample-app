@@ -29,7 +29,7 @@ public class User extends PanacheEntityBaseWithFixture {
 
     public User(Long id, String name, String email) {
         this.id = id;
-        this.name = name;
+        this.name = name;  
         this.email = email;
     }
     

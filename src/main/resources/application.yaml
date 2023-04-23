@@ -10,10 +10,16 @@ quarkus:
   #Datasource
   datasource:
     db-kind: postgresql
-    username: db
-    password: db123
+    username: quarkus
+    password: quarkus
     reactive:
       url: vertx-reactive:postgresql://localhost:5432/db
+    devservices:
+      port: 5432
+      db-name: db
+      username: quarkus
+      password: quarkus
+      enabled: true
   #ORM
   hibernate-orm:
     database:
